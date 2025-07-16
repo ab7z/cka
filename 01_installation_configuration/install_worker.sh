@@ -1,10 +1,57 @@
 #!/bin/bash
+#
+# Kubernetes Worker Node Installation Script
+#
+# Usage:
+#   1. With command line argument:
+#      ./install_worker.sh <CONTROL_PLANE_IP>
+#      Example: ./install_worker.sh <CONTROL_PLANE_IP>
+#
+#   2. With environment variable:
+#      CONTROL_PLANE_IP=<CONTROL_PLANE_IP> ./install_worker.sh
+#
+#   3. Interactive mode (will prompt for IP):
+#      ./install_worker.sh
+#
+# Requirements:
+#   - Ubuntu/Debian-based system
+#   - Sudo privileges
+#   - Minimum 2 CPU cores and 2GB RAM
+#   - Network connectivity to control plane
+#
 
 set -e
 
 echo "============================================="
 echo "Starting Kubernetes Worker Installation"
 echo "============================================="
+
+echo ""
+echo "Checking for control plane IP..."
+
+# Check for control plane IP from environment variable or command line argument
+CONTROL_PLANE_IP="${CONTROL_PLANE_IP:-$1}"
+
+if [ -z "$CONTROL_PLANE_IP" ]; then
+  echo ""
+  echo "Control plane IP not provided."
+  echo "Please provide the IP address of your Kubernetes control plane node."
+  echo ""
+  read -r -p "Enter control plane IP address: " CONTROL_PLANE_IP
+  
+  if [ -z "$CONTROL_PLANE_IP" ]; then
+    echo "ERROR: Control plane IP is required"
+    exit 1
+  fi
+fi
+
+# Validate IP address format
+if ! echo "$CONTROL_PLANE_IP" | grep -qE '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'; then
+  echo "ERROR: Invalid IP address format: $CONTROL_PLANE_IP"
+  exit 1
+fi
+
+echo "Using control plane IP: $CONTROL_PLANE_IP"
 
 echo ""
 echo "Checking system requirements..."
@@ -259,7 +306,7 @@ sudo sed -i '/k8scp/d' /etc/hosts
 sudo sed -i "/[[:space:]]${WORKER_PLANE_HOSTNAME}$/d" /etc/hosts
 
 {
-  echo "$WORKER_PLANE_IP k8scp"
+  echo "$CONTROL_PLANE_IP k8scp"
   echo "$WORKER_PLANE_IP $WORKER_PLANE_HOSTNAME"
   cat /etc/hosts
 } | sudo tee /etc/hosts.tmp >/dev/null
