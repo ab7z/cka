@@ -282,32 +282,14 @@ echo "Installing Kubernetes components version: $K8S_PKG_VERSION"
 sudo apt install -y kubeadm="$K8S_PKG_VERSION" kubelet="$K8S_PKG_VERSION" kubectl="$K8S_PKG_VERSION"
 sudo apt-mark hold kubelet kubeadm kubectl
 
-# worker plane DNS entries in /etc/hosts
-echo "Update /etc/hosts with worker plane entries"
-# Detect worker plane IP address using ip addr command
-# Get the primary network interface IP (excluding loopback)
-WORKER_PLANE_IP=$(ip addr show | grep -E "inet [0-9]+" | grep -v "127.0.0.1" | head -1 | awk '{print $2}' | cut -d'/' -f1)
+# Configure /etc/hosts for control plane connectivity
+echo ""
+echo "Configuring /etc/hosts for control plane connectivity..."
 
-if [ -z "$WORKER_PLANE_IP" ]; then
-  echo "ERROR: Failed to detect IP address. No network interface found."
-  echo "Please ensure network interfaces are configured properly."
-  exit 1
-fi
-
-echo "Detected worker plane IP: $WORKER_PLANE_IP"
-
-# Detect hostname for worker plane node
-WORKER_PLANE_HOSTNAME=$(hostname)
-echo "worker plane hostname: $WORKER_PLANE_HOSTNAME"
-
-# Configure /etc/hosts for Kubernetes worker plane
-echo "Configuring /etc/hosts for Kubernetes worker plane..."
+# Remove any existing k8scp entry
 sudo sed -i '/k8scp/d' /etc/hosts
-sudo sed -i "/[[:space:]]${WORKER_PLANE_HOSTNAME}$/d" /etc/hosts
 
-{
-  echo "$CONTROL_PLANE_IP k8scp"
-  echo "$WORKER_PLANE_IP $WORKER_PLANE_HOSTNAME"
-  cat /etc/hosts
-} | sudo tee /etc/hosts.tmp >/dev/null
-sudo mv /etc/hosts.tmp /etc/hosts
+# Add control plane entry
+echo "$CONTROL_PLANE_IP k8scp" | sudo tee -a /etc/hosts >/dev/null
+
+echo "Added control plane entry to /etc/hosts: $CONTROL_PLANE_IP k8scp"
