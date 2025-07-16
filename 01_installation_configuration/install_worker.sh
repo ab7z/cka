@@ -3,14 +3,14 @@
 # Kubernetes Worker Node Installation Script
 #
 # Usage:
-#   1. With command line argument:
-#      ./install_worker.sh <CONTROL_PLANE_IP>
-#      Example: ./install_worker.sh <CONTROL_PLANE_IP>
+#   1. With command line arguments:
+#      ./install_worker.sh <CONTROL_PLANE_IP> <CONTROL_PLANE_HOSTNAME>
+#      Example: ./install_worker.sh <CONTROL_PLANE_IP> master-node
 #
-#   2. With environment variable:
-#      CONTROL_PLANE_IP=<CONTROL_PLANE_IP> ./install_worker.sh
+#   2. With environment variables:
+#      CONTROL_PLANE_IP=<CONTROL_PLANE_IP> CONTROL_PLANE_HOSTNAME=master-node ./install_worker.sh
 #
-#   3. Interactive mode (will prompt for IP):
+#   3. Interactive mode (will prompt for IP and hostname):
 #      ./install_worker.sh
 #
 # Requirements:
@@ -52,6 +52,24 @@ if ! echo "$CONTROL_PLANE_IP" | grep -qE '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[
 fi
 
 echo "Using control plane IP: $CONTROL_PLANE_IP"
+
+# Check for control plane hostname from environment variable or command line argument
+CONTROL_PLANE_HOSTNAME="${CONTROL_PLANE_HOSTNAME:-$2}"
+
+if [ -z "$CONTROL_PLANE_HOSTNAME" ]; then
+  echo ""
+  echo "Control plane hostname not provided."
+  echo "Please provide the hostname of your Kubernetes control plane node."
+  echo ""
+  read -r -p "Enter control plane hostname: " CONTROL_PLANE_HOSTNAME
+  
+  if [ -z "$CONTROL_PLANE_HOSTNAME" ]; then
+    echo "ERROR: Control plane hostname is required"
+    exit 1
+  fi
+fi
+
+echo "Using control plane hostname: $CONTROL_PLANE_HOSTNAME"
 
 echo ""
 echo "Checking system requirements..."
@@ -286,10 +304,18 @@ sudo apt-mark hold kubelet kubeadm kubectl
 echo ""
 echo "Configuring /etc/hosts for control plane connectivity..."
 
-# Remove any existing k8scp entry
+# Remove any existing k8scp and control plane hostname entries
 sudo sed -i '/k8scp/d' /etc/hosts
+sudo sed -i "/[[:space:]]${CONTROL_PLANE_HOSTNAME}$/d" /etc/hosts
 
-# Add control plane entry
-echo "$CONTROL_PLANE_IP k8scp" | sudo tee -a /etc/hosts >/dev/null
+# Add control plane entries
+{
+  echo "$CONTROL_PLANE_IP k8scp"
+  echo "$CONTROL_PLANE_IP $CONTROL_PLANE_HOSTNAME"
+  cat /etc/hosts
+} | sudo tee /etc/hosts.tmp >/dev/null
+sudo mv /etc/hosts.tmp /etc/hosts
 
-echo "Added control plane entry to /etc/hosts: $CONTROL_PLANE_IP k8scp"
+echo "Added control plane entries to /etc/hosts:"
+echo "  $CONTROL_PLANE_IP k8scp"
+echo "  $CONTROL_PLANE_IP $CONTROL_PLANE_HOSTNAME"

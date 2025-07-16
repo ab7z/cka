@@ -26,13 +26,13 @@ chmod +x uninstall_cp.sh
 ```bash
 chmod +x install_worker.sh
 
-# Method 1: Command line argument
-./install_worker.sh <CONTROL_PLANE_IP>
+# Method 1: Command line arguments
+./install_worker.sh <CONTROL_PLANE_IP> master-node
 
-# Method 2: Environment variable
-CONTROL_PLANE_IP=<CONTROL_PLANE_IP> ./install_worker.sh
+# Method 2: Environment variables
+CONTROL_PLANE_IP=<CONTROL_PLANE_IP> CONTROL_PLANE_HOSTNAME=master-node ./install_worker.sh
 
-# Method 3: Interactive (will prompt for IP)
+# Method 3: Interactive (will prompt for IP and hostname)
 ./install_worker.sh
 ```
 
